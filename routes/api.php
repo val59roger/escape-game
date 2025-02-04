@@ -24,4 +24,4 @@ Route::apiResource('player-actions', PlayerActionController::class);
 Route::apiResource('leaderboard', LeaderboardController::class);
 Route::apiResource('saves', SaveController::class);
 Route::middleware('auth:sanctum')->get('/user/statistics', [UserStatisticController::class, 'index']);
-Route::post('/save-score', [GameController::class, 'store'])->middleware('auth:sanctum');
+Route::middleware('auth:sanctum')->post('/save-score', [GameController::class, 'store']);

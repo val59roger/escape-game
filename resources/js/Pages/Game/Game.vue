@@ -50,17 +50,28 @@ const startTimer = () => {
     }, 1000);
 };
 
-// Sauvegarde du score
-const saveScore = () => {
-    axios.post('/api/save-score', {
-        scenario_id: scenarios.value[currentScenarioIndex.value].id,
-        score: score.value
-    }, { withCredentials: true }) // Permet d'envoyer le cookie d'authentification
-    .then(() => {
-        alert(`🎉 Score sauvegardé : ${score.value} points`);
+axios.get('/api/user', { withCredentials: true })
+    .then(response => {
+        console.log('Utilisateur connecté :', response.data);
     })
     .catch(error => {
-        console.error("Erreur de sauvegarde du score :", error);
+        console.error("L'utilisateur n'est pas connecté :", error);
+    });
+
+
+// Sauvegarde du score
+const saveScore = () => {
+    axios.get('/sanctum/csrf-cookie').then(() => {
+        axios.post('/api/save-score', {
+            scenario_id: scenarios.value[currentScenarioIndex.value].id,
+            score: score.value
+        }, {
+            withCredentials: true,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
+            }
+        });
     });
 };
 
