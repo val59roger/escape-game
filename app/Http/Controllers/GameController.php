@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Game;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Models\Scenario;
 
 class GameController extends Controller
 {
@@ -54,4 +55,11 @@ class GameController extends Controller
         $game->delete();
         return response()->json(['message' => 'Game deleted successfully']);
     }
+
+    public function getScenarioWithHints($scenarioId)
+    {
+        $scenario = Scenario::with('enigmas')->findOrFail($scenarioId);
+        return response()->json($scenario);
+    }
+
 }

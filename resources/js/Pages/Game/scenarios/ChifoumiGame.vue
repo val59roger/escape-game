@@ -1,44 +1,65 @@
 <script setup>
 import { ref, defineEmits } from 'vue';
 
-const choices = ['Pierre', 'Feuille', 'Ciseaux'];
-const playerChoice = ref(null);
-const aiChoice = ref(null);
-const result = ref('');
 const emit = defineEmits(['gameCompleted']);
+const message = ref("Choisissez Pierre, Feuille ou Ciseaux.");
+const iaChoice = ref("");
+const playerChoice = ref("");
+const outcomes = ["Pierre", "Feuille", "Ciseaux"];
+const hints = ref([
+    "L'IA choisit souvent Pierre en premier.",
+    "Ciseaux est rarement choisi.",
+    "Si l'IA vient de choisir Feuille, elle choisira probablement Pierre ensuite."
+]);
+const revealedHints = ref(0);
 
 const playGame = (choice) => {
     playerChoice.value = choice;
-    aiChoice.value = choices[Math.floor(Math.random() * choices.length)];
-    checkWinner();
+    iaChoice.value = outcomes[Math.floor(Math.random() * 3)];
+    if (
+        (playerChoice.value === "Pierre" && iaChoice.value === "Ciseaux") ||
+        (playerChoice.value === "Feuille" && iaChoice.value === "Pierre") ||
+        (playerChoice.value === "Ciseaux" && iaChoice.value === "Feuille")
+    ) {
+        message.value = `Bravo 🎉 ! Vous avez gagné. L'IA a choisi ${iaChoice.value}.`;
+        emit('gameCompleted');  // 🔥 Émission de l’événement quand le joueur gagne
+    } else if (playerChoice.value === iaChoice.value) {
+        message.value = "Égalité ! Réessayez.";
+    } else {
+        message.value = `Perdu ❌ ! L'IA a choisi ${iaChoice.value}. Réessayez.`;
+    }
 };
 
-const checkWinner = () => {
-    if (playerChoice.value === aiChoice.value) {
-        result.value = "Égalité ! Réessayez.";
-    } else if (
-        (playerChoice.value === 'Pierre' && aiChoice.value === 'Ciseaux') ||
-        (playerChoice.value === 'Feuille' && aiChoice.value === 'Pierre') ||
-        (playerChoice.value === 'Ciseaux' && aiChoice.value === 'Feuille')
-    ) {
-        result.value = "Gagné 🎉 !";
-        emit('gameCompleted'); // Déclenche l'événement pour passer au prochain scénario
-    } else {
-        result.value = "Perdu ❌ ! Essayez encore.";
+// Révéler les indices un par un et appliquer une pénalité
+const revealHint = () => {
+    if (revealedHints.value < hints.value.length) {
+        revealedHints.value++;
+        emit('penaltyApplied', 5);  // Émettre un événement avec la pénalité
     }
 };
 </script>
 
 <template>
-    <div class="game-container">
-        <h3>Jouez à Pierre-Feuille-Ciseaux</h3>
-        <div class="choices">
-            <button v-for="choice in choices" :key="choice" @click="playGame(choice)" class="btn btn-primary mx-1">
-                {{ choice }}
+    <div>
+        <h3>Pierre-Feuille-Ciseaux</h3>
+        <p>{{ message }}</p>
+        <div class="d-flex justify-content-around">
+            <button @click="playGame('Pierre')" class="btn btn-info">Pierre</button>
+            <button @click="playGame('Feuille')" class="btn btn-info">Feuille</button>
+            <button @click="playGame('Ciseaux')" class="btn btn-info">Ciseaux</button>
+        </div>
+
+        <!-- Indices révélés un par un -->
+        <div class="hints mt-4">
+            <h5>Indices :</h5>
+            <ul>
+                <li v-for="(hint, index) in hints.slice(0, revealedHints)" :key="index">
+                    <span class="badge bg-info text-white">{{ hint }}</span>
+                </li>
+            </ul>
+            <button v-if="revealedHints < hints.length" @click="revealHint" class="btn btn-warning mt-3">
+                Afficher un indice (-5 points)
             </button>
         </div>
-        <p>Votre choix : <strong>{{ playerChoice }}</strong></p>
-        <p>Choix de l'IA : <strong>{{ aiChoice }}</strong></p>
-        <p class="result">{{ result }}</p>
     </div>
 </template>

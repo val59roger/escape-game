@@ -12,9 +12,8 @@ import PotionMixGame from '@/Pages/Game/scenarios/PotionMixGame.vue';
 
 const scenarios = ref([]);
 const currentScenarioIndex = ref(0);
-const gameCompleted = ref(false);
 const timeLeft = ref(60);
-const score = ref(100);
+const score = ref(100); // Le score global
 let timerInterval = null;
 
 onMounted(() => {
@@ -22,84 +21,58 @@ onMounted(() => {
     startTimer();
 });
 
-// Charger les scénarios
-const fetchScenarios = () => {
-    axios.get('/api/scenarios')
-        .then(response => {
-            scenarios.value = response.data;
-        })
-        .catch(error => {
-            console.error('Erreur de chargement des scénarios:', error);
-        });
+// Charger les scénarios depuis l'API
+const fetchScenarios = async () => {
+    try {
+        const response = await axios.get('/api/scenarios');
+        scenarios.value = response.data;
+    } catch (error) {
+        console.error('Erreur lors du chargement des scénarios:', error);
+    }
 };
 
-// Démarrer le timer
+// Passer automatiquement au scénario suivant
+const nextScenario = () => {
+    if (currentScenarioIndex.value < scenarios.value.length - 1) {
+        currentScenarioIndex.value++;
+        startTimer();
+    } else {
+        alert("🎉 Félicitations, vous avez terminé tous les scénarios !");
+        clearInterval(timerInterval);
+        showFinalScore(); // Affiche le score final à la fin de tous les scénarios
+    }
+};
+
+// Timer
 const startTimer = () => {
     timeLeft.value = 60;
-    score.value = 100; // Score max au début
     if (timerInterval) clearInterval(timerInterval);
     timerInterval = setInterval(() => {
         if (timeLeft.value > 0) {
             timeLeft.value--;
-            score.value--; // Réduction du score chaque seconde
+            score.value--; // Le score diminue à chaque seconde
         } else {
             clearInterval(timerInterval);
-            alert("⏳ Temps écoulé ! Score perdu !");
-            resetGame();
+            alert("⏳ Temps écoulé !");
+            resetScenario();
         }
     }, 1000);
 };
 
-axios.get('/api/user', { withCredentials: true })
-    .then(response => {
-        console.log('Utilisateur connecté :', response.data);
-    })
-    .catch(error => {
-        console.error("L'utilisateur n'est pas connecté :", error);
-    });
-
-
-// Sauvegarde du score
-const saveScore = () => {
-    axios.get('/sanctum/csrf-cookie').then(() => {
-        axios.post('/api/save-score', {
-            scenario_id: scenarios.value[currentScenarioIndex.value].id,
-            score: score.value
-        }, {
-            withCredentials: true,
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'Accept': 'application/json'
-            }
-        });
-    });
-};
-
-// Passer au scénario suivant
-const nextScenario = () => {
-    saveScore(); // Enregistrer le score
-    if (currentScenarioIndex.value < scenarios.value.length - 1) {
-        currentScenarioIndex.value++;
-        gameCompleted.value = false;
-        startTimer();
-    } else {
-        alert("🎉 Félicitations ! Vous avez terminé tous les scénarios.");
-        clearInterval(timerInterval);
-    }
-};
-
-// Réinitialiser le scénario actuel en cas d'échec
-const resetGame = () => {
-    gameCompleted.value = false;
+// Réinitialiser le scénario actuel
+const resetScenario = () => {
     startTimer();
 };
 
-// Arrêter le timer si le jeu est complété
-watch(gameCompleted, (newValue) => {
-    if (newValue) {
-        clearInterval(timerInterval);
-    }
-});
+// Appliquer la pénalité sur le score
+const applyPenalty = (points) => {
+    score.value -= points;
+};
+
+// Afficher le score final à la fin de tous les scénarios
+const showFinalScore = () => {
+    alert(`🎉 Félicitations ! Votre score final est : ${score.value}`);
+};
 </script>
 
 <template>
@@ -122,21 +95,15 @@ watch(gameCompleted, (newValue) => {
                         <div class="card-body">
                             <p>{{ scenarios[currentScenarioIndex]?.description }}</p>
 
-                            <!-- Timer et Score -->
                             <h5 class="text-danger text-center">⏳ Temps restant : {{ timeLeft }}s</h5>
                             <h5 class="text-success text-center">🏆 Score : {{ score }}</h5>
 
-                            <!-- Mini-jeux dynamiques selon le scénario -->
-                            <ChifoumiGame v-if="currentScenarioIndex === 0 && !gameCompleted" @gameCompleted="gameCompleted = true" />
-                            <GuessNumberGame v-if="currentScenarioIndex === 1 && !gameCompleted" @gameCompleted="gameCompleted = true" />
-                            <EquationGame v-if="currentScenarioIndex === 2 && !gameCompleted" @gameCompleted="gameCompleted = true" />
-                            <PirateLockGame v-if="currentScenarioIndex === 3 && !gameCompleted" @gameCompleted="gameCompleted = true" />
-                            <PotionMixGame v-if="currentScenarioIndex === 4 && !gameCompleted" @gameCompleted="gameCompleted = true" />
-
-                            <!-- Bouton pour passer au scénario suivant -->
-                            <button v-if="gameCompleted" class="btn btn-primary mt-3" @click="nextScenario">
-                                Scénario suivant →
-                            </button>
+                            <!-- Mini-jeux dynamiques -->
+                            <ChifoumiGame v-if="currentScenarioIndex === 0" @gameCompleted="nextScenario" @penaltyApplied="applyPenalty" />
+                            <GuessNumberGame v-if="currentScenarioIndex === 1" @gameCompleted="nextScenario" @penaltyApplied="applyPenalty" />
+                            <EquationGame v-if="currentScenarioIndex === 2" @gameCompleted="nextScenario" @penaltyApplied="applyPenalty" />
+                            <PirateLockGame v-if="currentScenarioIndex === 3" @gameCompleted="nextScenario" @penaltyApplied="applyPenalty" />
+                            <PotionMixGame v-if="currentScenarioIndex === 4" @gameCompleted="nextScenario" @penaltyApplied="applyPenalty" />
                         </div>
                     </div>
                 </div>

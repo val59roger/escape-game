@@ -1,51 +1,78 @@
 <script setup>
 import { ref, defineEmits } from 'vue';
 
-const ingredients = ['Fiole Verte', 'Fiole Rouge', 'Fiole Bleue'];
-const selectedIngredients = ref([]);
-const correctCombination = ['Fiole Verte', 'Fiole Bleue'];
-const message = ref('Trouvez le bon mélange !');
-const emit = defineEmits(['gameCompleted']);
+const emit = defineEmits(['gameCompleted', 'penaltyApplied']);  // Ajouter l'événement 'penaltyApplied'
+const message = ref("Mélangez les bonnes fioles pour créer l’antidote.");
+const selectedPotions = ref([]);
+const antidote = ['Fiole Verte', 'Fiole Bleue'];
 
-// Fonction pour ajouter un ingrédient (max 2)
-const selectIngredient = (ingredient) => {
-    if (selectedIngredients.value.length < 2 && !selectedIngredients.value.includes(ingredient)) {
-        selectedIngredients.value.push(ingredient);
-    }
-};
+const hints = ref([
+    "La Fiole Rouge est toxique.",
+    "La Fiole Bleue est toujours utilisée dans l’antidote.",
+    "La Fiole Verte neutralise les toxines."
+]);
+const revealedHints = ref(0);
 
-// Vérifier la potion et réinitialiser en cas d’échec
-const mixPotion = () => {
-    if (JSON.stringify(selectedIngredients.value.sort()) === JSON.stringify(correctCombination.sort())) {
-        message.value = 'Antidote réussi 🎉 ! Vous pouvez continuer.';
+const checkAntidote = () => {
+    if (selectedPotions.value.sort().toString() === antidote.sort().toString()) {
+        message.value = "Antidote réussi 🎉 ! Vous avez neutralisé le poison.";
         emit('gameCompleted');
     } else {
-        message.value = 'Le mélange est toxique ❌ ! Les ingrédients sont remis à zéro.';
-        resetGame(); // Réinitialisation automatique en cas d'échec
+        message.value = "Mauvais mélange ❌. Réessayez.";
+        selectedPotions.value = [];
     }
 };
 
-// Réinitialiser les ingrédients sélectionnés
-const resetGame = () => {
-    selectedIngredients.value = [];
+// Révéler les indices un par un et appliquer une pénalité
+const revealHint = () => {
+    if (revealedHints.value < hints.value.length) {
+        revealedHints.value++;
+        emit('penaltyApplied', 5);  // Émettre un événement avec la pénalité
+    }
+};
+
+// Réinitialiser la liste des potions sélectionnées
+const resetPotions = () => {
+    selectedPotions.value = [];
 };
 </script>
 
 <template>
-    <div class="game-container">
-        <h3>Préparez l’Antidote</h3>
-        <p>Sélectionnez deux fioles :</p>
-        <div class="d-flex justify-content-center">
-            <button v-for="ingredient in ingredients" :key="ingredient"
-                class="btn btn-warning mx-1"
-                @click="selectIngredient(ingredient)">
-                {{ ingredient }}
-            </button>
+    <div>
+        <h3>Mélange de Potions</h3>
+        <p>{{ message }}</p>
+        <div class="d-flex justify-content-around">
+            <button @click="selectedPotions.push('Fiole Rouge')" class="btn btn-danger">Fiole Rouge</button>
+            <button @click="selectedPotions.push('Fiole Bleue')" class="btn btn-primary">Fiole Bleue</button>
+            <button @click="selectedPotions.push('Fiole Verte')" class="btn btn-success">Fiole Verte</button>
+            <button @click="selectedPotions.push('Fiole Jaune')" class="btn btn-warning">Fiole Jaune</button>
         </div>
 
-        <p class="mt-3">Ingrédients choisis : {{ selectedIngredients.join(', ') || 'Aucun' }}</p>
+        <!-- Afficher les potions sélectionnées -->
+        <div v-if="selectedPotions.length > 0" class="mt-3">
+            <h5>Potions sélectionnées :</h5>
+            <ul>
+                <li v-for="(potion, index) in selectedPotions" :key="index">
+                    <span class="badge bg-secondary">{{ potion }}</span>
+                </li>
+            </ul>
+            <!-- Bouton pour réinitialiser la liste -->
+            <button @click="resetPotions" class="btn btn-danger mt-3">Réinitialiser la sélection</button>
+        </div>
 
-        <button @click="mixPotion" class="btn btn-success mt-2">Mélanger</button>
-        <p class="mt-2">{{ message }}</p>
+        <button @click="checkAntidote" class="btn btn-info mt-3">Vérifier le mélange</button>
+
+        <!-- Indices révélés un par un -->
+        <div class="hints mt-4">
+            <h5>Indices :</h5>
+            <ul>
+                <li v-for="(hint, index) in hints.slice(0, revealedHints)" :key="index">
+                    <span class="badge bg-info text-white">{{ hint }}</span>
+                </li>
+            </ul>
+            <button v-if="revealedHints < hints.length" @click="revealHint" class="btn btn-warning mt-3">
+                Afficher un indice (-5 points)
+            </button>
+        </div>
     </div>
 </template>

@@ -25,3 +25,4 @@ Route::apiResource('leaderboard', LeaderboardController::class);
 Route::apiResource('saves', SaveController::class);
 Route::middleware('auth:sanctum')->get('/user/statistics', [UserStatisticController::class, 'index']);
 Route::middleware('auth:sanctum')->post('/save-score', [GameController::class, 'store']);
+Route::get('/scenario/{id}/hints', [GameController::class, 'getScenarioWithHints']);
